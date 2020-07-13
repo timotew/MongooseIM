@@ -26,8 +26,8 @@ all() ->
 
 groups() ->
     [{fusco, [], [pool_timeout_test | tests()]},
-     {gun_http1, [], tests()},
-     {gun_http2, [], tests()}].
+     {gun_http1, [], [unstable_connection_test | tests()]},
+     {gun_http2, [], [unstable_connection_test | tests()]}].
 
 tests() ->
     [get_test,
@@ -80,7 +80,18 @@ end_per_group(_, Config) ->
 init_per_testcase(request_timeout_test, Config) ->
     ConnOpts = proplists:get_value(connection_opts, Config),
     mongoose_wpool:start_configured_pools([{http, global, pool(), [],
-                                            [{request_timeout, 10} | ConnOpts]}],
+                                            [{workers, 5}, {request_timeout, 10} | ConnOpts]}],
+                                          [<<"a.com">>]),
+    Config;
+init_per_testcase(unstable_connection_test, Config) ->
+    ConnOpts = proplists:get_value(connection_opts, Config, #{}),
+    HttpOpts = proplists:get_value(http_opts, ConnOpts, #{}),
+
+    NewConnOpts = [{http_opts, HttpOpts#{connect_timeout => 500,
+                                         retry => 1,
+                                         retry_timeout => 500}} | ConnOpts],
+    mongoose_wpool:start_configured_pools([{http, global, pool(), [],
+                                            NewConnOpts}],
                                           [<<"a.com">>]),
     Config;
 init_per_testcase(pool_timeout_test, Config) ->
@@ -119,10 +130,23 @@ request_timeout_test(_Config) ->
     Result = mongoose_http_client:get(global, pool(), <<"some/path?sleep=true">>, []),
     {error, request_timeout} = Result.
 
+unstable_connection_test(_Config) ->
+    Pid = self(),
+    spawn(fun() ->
+                  R = mongoose_http_client:get(global, pool(), <<"some/path?sleep=true">>, []),
+                  Pid ! R
+          end),
+    timer:sleep(10),
+    http_helper:stop(),
+    http_helper:start(8080, '_', fun process_request/1),
+
+    Result = receive R -> R after 5000 -> error(no_finished_message) end,
+    {ok, {<<"200">>, <<"OK">>}} = Result.
+
 pool_timeout_test(_Config) ->
     Pid = self(),
     spawn(fun() ->
-                  mongoose_http_client:get(global, pool(), <<"/some/path?sleep=true">>, []),
+                  mongoose_http_client:get(global, pool(), <<"some/path?sleep=true">>, []),
                   Pid ! finished
           end),
     timer:sleep(10), % wait for the only pool worker to start handling the request
