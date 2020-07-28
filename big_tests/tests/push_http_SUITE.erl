@@ -34,6 +34,11 @@ suite() ->
 %%--------------------------------------------------------------------
 
 init_per_suite(Config) ->
+
+    dbg:tracer(),
+    dbg:p(all, c),
+    dbg:tpl(?MODULE, x),
+
     start_pool(),
     setup_modules(),
     escalus:init_per_suite(Config).
@@ -105,14 +110,10 @@ simple_push(Config) ->
     escalus:fresh_story(
         Config, [{alice, 1}, {bob, 1}],
         fun(Alice, Bob) ->
-            Send = fun(Body) ->
-                       Stanza = escalus_stanza:chat_to(Bob, Body),
-                       escalus_client:send(Alice, Stanza)
-                   end,
-            Send(<<"hej">>),
+            send(Alice, Bob, <<"hej">>),
             [R] = got_push(push, 1),
             check_default_format(Alice, Bob, <<"hej">>, R),
-            Send(<<>>),
+            send(Alice, Bob, <<>>),
             got_no_push(push),
             ok
         end).
@@ -121,13 +122,8 @@ custom_push(Config) ->
     escalus:fresh_story(
         Config, [{alice, 1}, {bob, 1}],
         fun(Alice, Bob) ->
-            Send = fun(Body) ->
-                       Stanza = escalus_stanza:chat_to(Bob, Body),
-                ct:pal("Stanza: ~p", [Stanza]),
-                       escalus_client:send(Alice, Stanza)
-                   end,
-            Send(<<"hej">>),
-            Send(<<>>),
+            send(Alice, Bob, <<"hej">>),
+            send(Alice, Bob, <<>>),
 %%            now we receive them both ways, and with a custom body
             Res = got_push(push, 4),
             ?assertEqual([<<"in-">>,<<"in-hej">>,<<"out-">>,<<"out-hej">>], lists:sort(Res)),
@@ -138,12 +134,8 @@ push_to_many(Config) ->
     escalus:fresh_story(
         Config, [{alice, 1}, {bob, 1}],
         fun(Alice, Bob) ->
-            Send = fun(Body) ->
-                       Stanza = escalus_stanza:chat_to(Bob, Body),
-                       escalus_client:send(Alice, Stanza)
-                   end,
-            Send(<<"hej">>),
-            Send(<<>>),
+            send(Alice, Bob, <<"hej">>),
+            send(Alice, Bob, <<>>),
 %%            now we receive them both ways, and with a custom body
             Res = got_push(push, 4),
             ?assertEqual([<<"in-">>,<<"in-hej">>,<<"out-">>,<<"out-hej">>], lists:sort(Res)),
@@ -279,3 +271,7 @@ to_lower(B) ->
             )
         )
     ).
+
+send(Alice, Bob, Body) ->
+    Stanza = escalus_stanza:chat_to(Bob, Body),
+    escalus_client:send(Alice, Stanza).
