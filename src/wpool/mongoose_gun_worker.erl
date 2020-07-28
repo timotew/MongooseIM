@@ -114,7 +114,7 @@ handle_info({gun_data, ConnPid, StreamRef, nofin, Data},
             #state{pid = ConnPid, requests = Requests} = State) ->
     {Req, ResData} = maps:get(StreamRef, Requests),
     Acc = ResData#response_data.acc,
-    NewData = ResData#response_data{acc = <<Acc/binary, Data>>},
+    NewData = ResData#response_data{acc = <<Acc/binary, Data/binary>>},
     {noreply, State#state{requests = Requests#{StreamRef := {Req, NewData}}}};
 handle_info({gun_data, ConnPid, StreamRef, fin, Data},
             #state{pid = ConnPid, requests = Requests} = State) ->
