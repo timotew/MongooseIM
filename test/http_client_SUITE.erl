@@ -20,21 +20,20 @@
 -include_lib("common_test/include/ct.hrl").
 
 all() ->
-    [{group, fusco},
-     {group, gun_http1},
+    [{group, gun_http1},
      {group, gun_http2}].
 
 groups() ->
-    [{fusco, [], [pool_timeout_test | tests()]},
-     {gun_http1, [], [unstable_connection_test | tests()]},
-     {gun_http2, [], [unstable_connection_test | tests()]}].
+    [{gun_http1, [], tests()},
+     {gun_http2, [], tests()}].
 
 tests() ->
     [get_test,
      no_pool_test,
      post_test,
      request_timeout_test,
-     multiple_requests_test
+     multiple_requests_test,
+     unstable_connection_test
     ].
 
 init_per_suite(Config) ->
@@ -63,8 +62,6 @@ end_per_suite(_Config) ->
     exit(whereis(ejabberd_sup), shutdown),
     whereis(test_helper) ! stop.
 
-init_per_group(fusco, Config) ->
-    [{connection_opts, [{server, {"http://localhost", 8080}}, {http_client, fusco}]} | Config];
 init_per_group(gun_http1, Config) ->
     application:ensure_all_started(gun),
     [{connection_opts, [{server, {"127.0.0.1", 8080}}, {http_client, gun}]} | Config];

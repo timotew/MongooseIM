@@ -156,7 +156,7 @@ push_to_many(Config) ->
 start_pool() ->
     Pool = {http, host, http_pool,
             [{strategy, random_worker}, {call_timeout, 5000}, {workers, 20}],
-            [{path_prefix, "/"}, {http_opts, []}, {server, http_notifications_host()}]},
+            [{path_prefix, "/"}, {http_opts, #{}}, {server, http_notifications_host()}]},
     ejabberd_node_utils:call_fun(mongoose_wpool,
                                  start_configured_pools,
                                  [[Pool], [<<"localhost">>]]),
