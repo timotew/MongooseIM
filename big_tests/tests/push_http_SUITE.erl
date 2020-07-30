@@ -34,20 +34,17 @@ suite() ->
 %%--------------------------------------------------------------------
 
 init_per_suite(Config) ->
-    start_pool(),
     setup_modules(),
     escalus:init_per_suite(Config).
 
 end_per_suite(Config) ->
-    stop_pool(),
     teardown_modules(),
     escalus_fresh:clean(),
     escalus:end_per_suite(Config).
 
 init_per_group(GroupName, Config) ->
     Config2 = dynamic_modules:save_modules(domain(), Config),
-    dynamic_modules:ensure_modules(domain(),
-                                   required_modules(GroupName)),
+    dynamic_modules:ensure_modules(domain(), required_modules(GroupName)),
     escalus:create_users(Config2, escalus:get_users([alice, bob])).
 
 end_per_group(_, Config) ->
@@ -56,9 +53,11 @@ end_per_group(_, Config) ->
 
 init_per_testcase(CaseName, Config) ->
     start_http_listener(),
+    start_pool(),
     escalus:init_per_testcase(CaseName, Config).
 
 end_per_testcase(CaseName, Config) ->
+    stop_pool(),
     stop_http_listener(),
     escalus:end_per_testcase(CaseName, Config).
 
@@ -143,7 +142,7 @@ push_to_many(Config) ->
 start_pool() ->
     Pool = {http, host, http_pool,
             [{strategy, random_worker}, {call_timeout, 5000}, {workers, 20}],
-            [{path_prefix, "/"}, {http_opts, #{}}, {server, http_notifications_host()}]},
+            [{path_prefix, "/"}, {http_opts, #{connect_timeout => 10000}}, {server, http_notifications_host()}]},
     ejabberd_node_utils:call_fun(mongoose_wpool,
                                  start_configured_pools,
                                  [[Pool], [<<"localhost">>]]),
