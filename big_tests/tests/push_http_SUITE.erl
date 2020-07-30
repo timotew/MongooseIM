@@ -34,11 +34,6 @@ suite() ->
 %%--------------------------------------------------------------------
 
 init_per_suite(Config) ->
-
-    dbg:tracer(),
-    dbg:p(all, c),
-    dbg:tpl(?MODULE, x),
-
     start_pool(),
     setup_modules(),
     escalus:init_per_suite(Config).
